@@ -1,0 +1,22 @@
+logLevel = "DEBUG"
+[api]
+
+[entryPoints]
+  [entryPoints.management]
+  address = "localhost:35000"
+
+[file]
+
+[backends]
+  [backends.management]
+    [backends.management.servers.server1]
+      url = "http://edge-api:35000"
+
+[frontends]
+  [frontends.management]
+    entrypoints = ["management"]
+    backend = "management"
+    [frontends.management.routes.all]
+      rule = "PathPrefix:/"
+      [frontends.management.headers.customrequestheaders]
+        Authorization = "Bearer %TOKEN%"

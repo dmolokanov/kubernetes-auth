@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-module
+  labels:
+    app: edge-module
+spec:
+  selector:
+    matchLabels:
+      app: edge-module
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: edge-module
+    spec:
+      serviceAccountName: edge-module-service-account
+      containers:
+        - name: proxy
+          image: dmolokanov/edge-proxy
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/traefik
+
+        - name: module
+          image: dmolokanov/edge-module
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do curl http://localhost:35000; sleep 5;done"]
+      volumes:
+        - name: config-volume
+          configMap:
+            name: edge-api-proxy-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edge-api-proxy-config
+  labels:
+    app: edge-module
+data:
+  traefik.toml: |-
+    logLevel = "DEBUG"
+    [api]
+
+    [entryPoints]
+      [entryPoints.management]
+        address = "localhost:35000"
+
+    [file]
+
+    [backends]
+      [backends.management]
+      [backends.management.servers.server1]
+        url = "http://edge-api:35000"
+
+    [frontends]
+      [frontends.management]
+        entrypoints = ["management"]
+        backend = "management"
+        [frontends.management.routes.all]
+          rule = "PathPrefix:/"
+          [frontends.management.headers.customrequestheaders]
+            Authorization = "Bearer %TOKEN%"
